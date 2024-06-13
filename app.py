@@ -1,11 +1,20 @@
 from flask import Flask, request, jsonify
 import json
 import re
+from flask_cors import cross_origin
+import os  # Ajouté ici pour corriger l'erreur "os not defined"
+from transformers import WhisperProcessor, WhisperForConditionalGeneration
+from datasets import Audio, load_dataset
+#import speech_recognition as sr
 
 app = Flask(__name__)
 
 locationsPath = "data/locations.json"
 materialsPath = "data/materials.json"
+
+processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
+model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium")
+
 
 
 def loadLocations(locationsPath):
@@ -17,6 +26,8 @@ def loadMaterials(materialsPath):
     with open(materialsPath, 'r', encoding='utf-8') as file:
         materials = json.load(file)
     return materials
+
+
 
 locations = loadLocations(locationsPath)
 materials = loadMaterials(materialsPath)
@@ -50,6 +61,35 @@ def classify():
         'lieu': lieu,
         'budget': budget_amount
     })
+
+
+@app.route('/transcribe', methods=['POST'])
+@cross_origin()  # Autorise les requêtes CORS pour cette route
+def transcribe_file():
+    print("test")
+    # Récupérer le fichier audio de la requête
+    audio_file = request.files['audio']
+
+    # Sauvegarder temporairement le fichier audio
+    filename = 'temp_audio.wav'
+    audio_file.save(filename)
+    # Charger l'audio avec librosa
+    y, sr = librosa.load(filename, sr=None)
+
+    # Préparer l'audio pour le modèle Whisper
+    input_features = processor(y, sampling_rate=sr, return_tensors="pt").input_features
+
+    # Générer les IDs de tokens
+    forced_decoder_ids = processor.get_decoder_prompt_ids(language="french", task="transcribe")
+    predicted_ids = model.generate(input_features, forced_decoder_ids=forced_decoder_ids)
+
+    # Déchiffrer les IDs de tokens en texte
+    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+
+    # Supprimer le fichier audio temporaire
+    os.remove(filename)
+
+    return jsonify({"message": transcription})
 
 
 

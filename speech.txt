@@ -1,0 +1,29 @@
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    # Récupérer le fichier audio de la requête
+    audio_file = request.files['audio']
+
+    # Sauvegarder temporairement le fichier audio
+    filename = 'temp_audio.wav'
+    audio_file.save(filename)
+
+    # Charger l'audio avec librosa
+    y, sr = librosa.load(filename, sr=None)
+
+    # Préparer l'audio pour le modèle Whisper
+    input_features = processor(y, sampling_rate=sr, return_tensors="pt").input_features
+
+    # Générer les IDs de tokens
+    forced_decoder_ids = processor.get_decoder_prompt_ids(language="french", task="transcribe")
+    predicted_ids = model.generate(input_features, forced_decoder_ids=forced_decoder_ids)
+
+    # Déchiffrer les IDs de tokens en texte
+    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+
+    # Supprimer le fichier audio temporaire
+    os.remove(filename)
+
+    return jsonify({"transcription": transcription})
+
+if __name__ == '__main__':
+    app.run(debug=True)
