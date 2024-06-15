@@ -3,8 +3,11 @@ import json
 import re
 from flask_cors import cross_origin
 import os  # Ajouté ici pour corriger l'erreur "os not defined"
-from transformers import WhisperProcessor, WhisperForConditionalGeneration
-from datasets import Audio, load_dataset
+import speech_recognition as sr
+import io
+
+
+
 #import speech_recognition as sr
 
 app = Flask(__name__)
@@ -12,10 +15,8 @@ app = Flask(__name__)
 locationsPath = "data/locations.json"
 materialsPath = "data/materials.json"
 
-processor = WhisperProcessor.from_pretrained("openai/whisper-medium")
-model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-medium")
-
-
+#processor = WhisperProcessor.from_pretrained("openai/whisper-small")
+#model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small")
 
 def loadLocations(locationsPath):
     with open(locationsPath, 'r', encoding='utf-8') as file:
@@ -34,6 +35,7 @@ materials = loadMaterials(materialsPath)
 
 
 @app.route('/', methods=['POST'])
+@cross_origin()  # Autorise les requêtes CORS pour cette route
 def classify():
     
     text = request.json['text']
@@ -66,30 +68,42 @@ def classify():
 @app.route('/transcribe', methods=['POST'])
 @cross_origin()  # Autorise les requêtes CORS pour cette route
 def transcribe_file():
-    print("test")
     # Récupérer le fichier audio de la requête
+
+    if 'audio' not in request.files:
+        return jsonify({"message": "No audio file part"}), 400
+
     audio_file = request.files['audio']
+    file_type = audio_file.content_type
+
+    file_stream = io.BytesIO(audio_file.read())
+    file_size = len(file_stream.getvalue())
+    
+    print(f"Type de fichier: {file_type}")
+    print(f"Taille du fichier: {file_size} octets")
+
+
 
     # Sauvegarder temporairement le fichier audio
     filename = 'temp_audio.wav'
-    audio_file.save(filename)
-    # Charger l'audio avec librosa
-    y, sr = librosa.load(filename, sr=None)
 
-    # Préparer l'audio pour le modèle Whisper
-    input_features = processor(y, sampling_rate=sr, return_tensors="pt").input_features
+    with open(filename, 'wb') as f_out:
+        f_out.write(file_stream.getvalue())
 
-    # Générer les IDs de tokens
-    forced_decoder_ids = processor.get_decoder_prompt_ids(language="french", task="transcribe")
-    predicted_ids = model.generate(input_features, forced_decoder_ids=forced_decoder_ids)
+    print("transcription....")
 
-    # Déchiffrer les IDs de tokens en texte
-    transcription = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+    r = sr.Recognizer()
+    with sr.AudioFile(filename) as source:
+        audio = r.record(source)  # read the entire audio file                  
+        print("Transcription: " + r.recognize_google(audio))
+
+    print("transcription finished")
 
     # Supprimer le fichier audio temporaire
-    os.remove(filename)
+    #os.remove(filename)
+    print("transcription_segments")
 
-    return jsonify({"message": transcription})
+    return jsonify({"message": "transcription"})
 
 
 
