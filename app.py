@@ -3,8 +3,9 @@ import json
 import re
 from flask_cors import cross_origin
 import os  # Ajouté ici pour corriger l'erreur "os not defined"
-import speech_recognition as sr
 import io
+from pydub import AudioSegment
+import whisper
 
 
 
@@ -33,6 +34,7 @@ def loadMaterials(materialsPath):
 locations = loadLocations(locationsPath)
 materials = loadMaterials(materialsPath)
 
+model = whisper.load_model('small')
 
 @app.route('/', methods=['POST'])
 @cross_origin()  # Autorise les requêtes CORS pour cette route
@@ -92,18 +94,15 @@ def transcribe_file():
 
     print("transcription....")
 
-    r = sr.Recognizer()
-    with sr.AudioFile(filename) as source:
-        audio = r.record(source)  # read the entire audio file                  
-        print("Transcription: " + r.recognize_google(audio))
-
+    result = model.transcribe(filename, fp16=False)
+    
     print("transcription finished")
-
+    print(result['text'])
     # Supprimer le fichier audio temporaire
-    #os.remove(filename)
+    os.remove(filename)
     print("transcription_segments")
 
-    return jsonify({"message": "transcription"})
+    return jsonify({"message": result['text']})
 
 
 
