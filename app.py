@@ -30,24 +30,34 @@ def loadMaterials(materialsPath):
     return materials
 
 
+months_abbr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 
 locations = loadLocations(locationsPath)
 materials = loadMaterials(materialsPath)
 
 model = whisper.load_model('small')
 
-@app.route('/', methods=['POST'])
 @cross_origin()  # Autorise les requêtes CORS pour cette route
-def classify():
+def classify(textInput):
     
-    text = request.json['text']
+    text = textInput.replace('.', '')
 
     # Recherche de mots-clés potentiels dans le texte
     instruments = []
     lieu = []
     budget_amount= []
-
     words = text.split()
+
+    pattern = r'(\d+\s+(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre))'
+
+    matches = re.findall(pattern, text)
+    budgetPattern = r'(\d+\s+(?:euros|euro|€))'
+
+    budget_amounts = re.findall(budgetPattern, text)
+
+    for budget in budget_amounts:
+        budget_amount.append(int(budget.split()[0]))
+    
 
     for word in words:
         if word.upper() in [mat.upper() for mat in materials]:
@@ -56,14 +66,12 @@ def classify():
         if word.upper() in [loc.upper() for loc in locations]:
             lieu.append(word)   
 
-        match = re.search(r'(entre\s*\d+-\d*(?:euro|€)\set\s*\d+-\d*(?:euro|€))|(?:\d+(?:\.\d+)?(?:euro|€))', word)
-        if match:
-            budget_amount.append(float(match.group(0).replace('€', '').replace('$', '').replace('euro','')))
-
     return jsonify({
+        'text': text,
         'instrument': instruments,
         'lieu': lieu,
-        'budget': budget_amount
+        'budget': budget_amount,
+        'date':matches
     })
 
 
@@ -102,7 +110,8 @@ def transcribe_file():
     os.remove(filename)
     print("transcription_segments")
 
-    return jsonify({"message": result['text']})
+    
+    return classify(result['text'])
 
 
 
