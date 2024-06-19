@@ -13,65 +13,104 @@ import whisper
 
 app = Flask(__name__)
 
-locationsPath = "data/locations.json"
-materialsPath = "data/materials.json"
+allLocationsPath = "data/locations.json"
+allMaterialsPath = "data/materials.json"
 
 #processor = WhisperProcessor.from_pretrained("openai/whisper-small")
 #model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small")
 
-def loadLocations(locationsPath):
-    with open(locationsPath, 'r', encoding='utf-8') as file:
-        locations = json.load(file)
-    return locations 
+def loadLocations(allLocationsPath):
+    with open(allLocationsPath, 'r', encoding='utf-8') as file:
+        allLocations = json.load(file)
+    return allLocations 
 
-def loadMaterials(materialsPath):
-    with open(materialsPath, 'r', encoding='utf-8') as file:
-        materials = json.load(file)
-    return materials
+def loadMaterials(allMaterialsPath):
+    with open(allMaterialsPath, 'r', encoding='utf-8') as file:
+        allMaterials = json.load(file)
+    return allMaterials
 
 
-months_abbr = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+def generate_rep(datas):
+    # Liste de mots-clés potentiels
+    keywords = ["le materiel", "le lieu", "les budgets", "les dates"]
+    
+    # Construction de la chaîne rep en fonction des listes materials, place, et budget_amount
+    rep = ""
+    i=0
+    for data in datas:
+        if not data:
+            if not rep:
+                rep="Veuillez préciser "+keywords[i]
+            else:
+                rep += ", "+keywords[i]
+        i+=1
 
-locations = loadLocations(locationsPath)
-materials = loadMaterials(materialsPath)
+    if ',' in rep:
+        repBefore, repAfter = rep.rsplit(',', 1)
+        # Concatène les deux reps avec "et" entre elles
+        rep = repBefore + ' et' + repAfter
+
+    return rep
+
+
+allLocations = loadLocations(allLocationsPath)
+allMaterials = loadMaterials(allMaterialsPath)
 
 model = whisper.load_model('small')
 
-@cross_origin()  # Autorise les requêtes CORS pour cette route
-def classify(textInput):
-    
-    text = textInput.replace('.', '')
+@app.route('/', methods=['POST'])
+@cross_origin()
+#def classify(textInput):
+def classify():
 
+    text = request.json['text']
+
+    #text = textInput.replace('.', '')
+
+    
     # Recherche de mots-clés potentiels dans le texte
-    instruments = []
-    lieu = []
+    materials = []
+    place = []
     budget_amount= []
+        
     words = text.split()
 
     pattern = r'(\d+\s+(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre))'
 
-    matches = re.findall(pattern, text)
-    budgetPattern = r'(\d+\s+(?:euros|euro|€))'
+    dates = re.findall(pattern, text)
+
+    budgetPattern = r'(\d+(?:\s*(?:euros|euro|€)))'
 
     budget_amounts = re.findall(budgetPattern, text)
 
     for budget in budget_amounts:
-        budget_amount.append(int(budget.split()[0]))
+
+        if len(budget.split()) > 1:
+            budget_amount.append(int(budget.split()[0]))
+        else:
+            budget= budget.replace('€', '').replace('euros', '').replace('euro', '')
+            budget_amount.append(int(budget))
+
     
 
     for word in words:
-        if word.upper() in [mat.upper() for mat in materials]:
-            instruments.append(word)
+        if word.upper() in [mat.upper() for mat in allMaterials]:
+            materials.append(word)
 
-        if word.upper() in [loc.upper() for loc in locations]:
-            lieu.append(word)   
+        if word.upper() in [loc.upper() for loc in allLocations]:
+            place.append(word)   
+
+
+    rep = generate_rep([materials, place, budget_amount,dates])
+
 
     return jsonify({
         'text': text,
-        'instrument': instruments,
-        'lieu': lieu,
+        'materials': materials,
+        'place': place,
         'budget': budget_amount,
-        'date':matches
+        'date':dates,
+        'reponse':rep
     })
 
 
@@ -91,8 +130,6 @@ def transcribe_file():
     
     print(f"Type de fichier: {file_type}")
     print(f"Taille du fichier: {file_size} octets")
-
-
 
     # Sauvegarder temporairement le fichier audio
     filename = 'temp_audio.wav'
