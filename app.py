@@ -8,16 +8,12 @@ from pydub import AudioSegment
 import whisper
 
 
-
-#import speech_recognition as sr
-
 app = Flask(__name__)
 
 allLocationsPath = "data/locations.json"
 allMaterialsPath = "data/materials.json"
 
-#processor = WhisperProcessor.from_pretrained("openai/whisper-small")
-#model = WhisperForConditionalGeneration.from_pretrained("openai/whisper-small")
+
 
 def loadLocations(allLocationsPath):
     with open(allLocationsPath, 'r', encoding='utf-8') as file:
@@ -75,7 +71,7 @@ def classify():
         
     words = text.split()
 
-    pattern = r'(\d+\s+(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre))'
+    pattern = r'(\d+(?:\s*(?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)))'
 
     dates = re.findall(pattern, text)
 
