@@ -9,6 +9,8 @@ import whisper
 
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+
 
 allLocationsPath = "data/locations.json"
 allMaterialsPath = "data/materials.json"
@@ -67,7 +69,7 @@ def classify():
     # Recherche de mots-clés potentiels dans le texte
     materials = []
     place = []
-    budget_amount= []
+    budgets=""
         
     words = text.split()
 
@@ -82,12 +84,21 @@ def classify():
     for budget in budget_amounts:
 
         if len(budget.split()) > 1:
-            budget_amount.append(int(budget.split()[0]))
+            if not budgets:
+                budgets=budget.split()[0]+"-"
+            else:
+                budgets+=budget.split()[0]
+            
+            #budget_amount.append(int(budget.split()[0]))
         else:
             budget= budget.replace('€', '').replace('euros', '').replace('euro', '')
-            budget_amount.append(int(budget))
+            if not budgets:
+                budgets=budget+"-"
+            else:
+                budgets+=budget
 
-    
+            #budget_amount.append(int(budget))
+
 
     for word in words:
         if word.upper() in [mat.upper() for mat in allMaterials]:
@@ -97,14 +108,14 @@ def classify():
             place.append(word)   
 
 
-    rep = generate_rep([materials, place, budget_amount,dates])
+    rep = generate_rep([materials, place, budgets,dates])
 
 
     return jsonify({
         'text': text,
         'materials': materials,
         'place': place,
-        'budget': budget_amount,
+        'budget': budgets,
         'date':dates,
         'reponse':rep
     })
