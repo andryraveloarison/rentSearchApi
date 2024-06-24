@@ -1,13 +1,11 @@
-
 from flask import jsonify
 import src.utils.loadData as loadData
 import src.utils.basicFunction as basicFunc
 import re
 
-
 allLocations = loadData.allLocations
 allMaterials = loadData.allMaterials
-
+allLocationsTrad = loadData.allMaterialsTrad
 def extract(textInput):
 
     text = textInput.replace('.', '')
@@ -45,7 +43,7 @@ def extract(textInput):
 
     for word in words:
         if word.upper() in [mat.upper() for mat in allMaterials]:
-            materials.append(word)
+            materials.append(word+","+allLocationsTrad[word])
 
         if word.upper() in [loc.upper() for loc in allLocations]:
             place.append(word)
