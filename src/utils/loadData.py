@@ -11,8 +11,9 @@ allMaterialsTradPath = "data/materialsTrad.json"
 def load_api_keys():
     api_keys = {}
     for key in os.environ:
+
         if key.startswith('API_KEY_'):
-            api_keys[os.getenv(key)] = f'key_description_{key[-1]}'  # Description basée sur le nom de la variable
+            api_keys[os.getenv(key)] = f'{key}'  # Description basée sur le nom de la variable
     return api_keys
 
 def loadLocations(allLocationsPath):
