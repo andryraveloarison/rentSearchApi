@@ -6,13 +6,28 @@ import re
 allLocations = loadData.allLocations
 allMaterials = loadData.allMaterials
 allLocationsTrad = loadData.allMaterialsTrad
+
 def extract(textInput):
 
     text = textInput.replace('.', '')
 
+    # Expression régulière pour trouver "ou" suivi d'un nombre qui pourrait être une date
+    pattern = r"(ou)\s(\d{1,2})"
+
+    # Fonction de remplacement qui remplace "ou" par "aout" uniquement si le nombre suit
+    replacement_function = lambda match: f"{match.group(1)}aout" if int(match.group(2)) <= 31 else match.group(0)
+
+    # Remplacer les occurrences selon la fonction de remplacement
+    texte_modifié = re.sub(pattern, replacement_function, text)
+
+    print(texte_modifié)
+
+
     # Recherche de mots-clés potentiels dans le texte
     materials = []
-    place = []
+    places = []
+    material = ""
+    place = ""
     budgets =""
 
     words = text.split()
@@ -43,14 +58,28 @@ def extract(textInput):
 
     for word in words:
         if word.upper() in [mat.upper() for mat in allMaterials]:
-            materials.append(word+","+allLocationsTrad[word])
+            material = word
+            materials.append(word)
 
         if word.upper() in [loc.upper() for loc in allLocations]:
-            place.append(word)
+            place = word
+            places.append(word)
+
+    rep = basicFunc.generate_rep([materials, places])
+    
+    return jsonify({
+        'text': text,
+        'material': material,
+        'place': place,
+        'budget': budgets,
+        'reponse' :rep
+    })
 
 
+    #AVEC LES DATES
+    """
     rep = basicFunc.generate_rep([materials, place, budgets ,dates])
-
+    
 
     return jsonify({
         'text': text,
@@ -60,4 +89,4 @@ def extract(textInput):
         'date' :dates,
         'reponse' :rep
     })
-
+    """

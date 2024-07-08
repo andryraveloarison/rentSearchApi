@@ -1,7 +1,9 @@
 
 def generate_rep(datas):
     # Liste de mots-clés potentiels
-    keywords = ["le materiel", "le lieu", "les budgets", "les dates"]
+    keywords = ["le materiel", "le lieu"]
+
+    #keywords = ["le materiel", "le lieu", "les budgets", "les dates"]
 
     # Construction de la chaîne rep en fonction des listes materials, place, et budget_amount
     rep = ""
