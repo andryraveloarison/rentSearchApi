@@ -28,7 +28,7 @@ def extract(textInput):
     places = []
     material = ""
     place = ""
-    budgets =""
+    budgets = None
 
     words = text.split()
 
@@ -66,6 +66,7 @@ def extract(textInput):
             places.append(word)
 
     rep = basicFunc.generate_rep([materials, places])
+    
     
     return jsonify({
         'text': text,
