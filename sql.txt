@@ -1,3 +1,0 @@
-{
-	"text":"Je cherche un souris a Paris avec un budget entre 100 euro et 200euro le 15 janvier au 25 janvier "
-}
